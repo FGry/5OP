@@ -18,6 +18,7 @@ public class Profile {
     private String fullName;
     @Column(name = "dob")
     private LocalDate dob;
+
     @Column(name = "phone", length = 15, unique = true)
     @Pattern(regexp = "^0\\d{9}$", message = "Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0")
     private String phone;

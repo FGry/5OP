@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "job")
@@ -18,11 +19,11 @@ public class Job {
     private Long id;
     @Column(name = "title", nullable = false)
     private String title;
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(name = "description", columnDefinition = "TEXT", nullable = false)
     private String description;
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(name = "requirements", columnDefinition = "TEXT", nullable = false)
     private String requirements;
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(name = "benefits", columnDefinition = "TEXT", nullable = false)
     private String benefits;
     @Column(name = "salaryMin", precision = 15, scale = 0)
     private BigDecimal salaryMin;
@@ -39,10 +40,12 @@ public class Job {
     @Column(name = "deadline")
     private LocalDate deadLine;
     @Column(name = "created_at")
-    private LocalDate createdAT;
+    private LocalDate createdAt;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL)
+    private List<Application> applications;
     @PrePersist
     protected void onCreate(){
         if(status == null){

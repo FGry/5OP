@@ -1,6 +1,9 @@
 package com.fiveop.enity;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
+
 @Entity
 @Table(name = "companies")
 @Getter
@@ -14,7 +17,7 @@ public class Company {
     private Long id;
     @Column(name = "name", nullable = false, unique = true)
     private String name;
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
     @Column(name = "logo", nullable = false)
     private String logo;
@@ -29,7 +32,8 @@ public class Company {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ToString.Exclude
     private User user;
-    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL)
-    private Job job;
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
+    @ToString.Exclude
+    private List<Job> jobs;
 
 }

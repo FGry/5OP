@@ -2,6 +2,8 @@ package com.fiveop.enity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -17,11 +19,16 @@ public class User {
     private String username;
     @Column(name = "password", nullable = false)
     private String password;
+    @Column(name = "email", nullable = false, unique = true)
+    private String email;
     @Enumerated(EnumType.STRING)
     @Column(name="role", nullable = false)
     private Role role;
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Profile profile;
-    @OneToOne(mappedBy = "companies", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Company company;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private List<Application> applications;
 }
