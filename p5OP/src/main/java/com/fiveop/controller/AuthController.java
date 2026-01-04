@@ -1,5 +1,7 @@
 package com.fiveop.controller;
 
+import com.fiveop.dto.AuthResponseDTO;
+import com.fiveop.dto.LoginDTO;
 import com.fiveop.dto.RegisterDTO;
 import com.fiveop.service.AuthService;
 import jakarta.validation.Valid;
@@ -22,6 +24,15 @@ public class AuthController {
             authService.register(request);
             return ResponseEntity.ok("Đăng ký tài khoản thành công!");
         }catch (RuntimeException e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginDTO request){
+        try{
+            AuthResponseDTO response = authService.login(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e){
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

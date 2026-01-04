@@ -1,11 +1,14 @@
 package com.fiveop.service;
 
+import com.fiveop.dto.AuthResponseDTO;
+import com.fiveop.dto.LoginDTO;
 import com.fiveop.dto.RegisterDTO;
 import com.fiveop.enity.Profile;
 import com.fiveop.enity.Role;
 import com.fiveop.enity.User;
 import com.fiveop.repo.ProfileRepository;
 import com.fiveop.repo.UserRepository;
+import com.fiveop.util.JwtUntils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +22,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUntils jwtUntils;
     @Transactional
     public User register(RegisterDTO request){
         if(userRepository.existsByUsername(request.getUsername())){
@@ -49,5 +53,14 @@ public class AuthService {
                 .build();
         user.setProfile(profile);
         return userRepository.save(user);
+    }
+    public AuthResponseDTO login(LoginDTO request){
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại!"));
+        if(!passwordEncoder.matches(request.getPassword(), user.getPassword())){
+            throw new RuntimeException("Mật khẩu không chính xác!");
+        }
+        String token = jwtUntils.generateToken(user.getUsername(), user.getRole().name());
+        return new AuthResponseDTO(token, user.getUsername(), user.getRole().name());
     }
 }
