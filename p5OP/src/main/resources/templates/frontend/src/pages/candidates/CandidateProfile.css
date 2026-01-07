@@ -1,0 +1,104 @@
+/* CandidateProfile.css */
+.profile-container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 2.5rem;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #ecf0f1;
+}
+
+.profile-title {
+    color: #2c3e50;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #27ae60; /* Màu xanh lá cho ứng viên */
+}
+
+.form-label {
+    font-weight: 600;
+    color: #34495e;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    border-color: #27ae60;
+}
+
+.form-input.readonly {
+    background-color: #f8f9fa;
+    color: #7f8c8d;
+    cursor: not-allowed;
+}
+
+.btn-save-profile {
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #27ae60, #219150);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: block;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.btn-save-profile:hover {
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    transform: translateY(-2px);
+}
+
+.file-upload-wrapper {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 2px dashed #ecf0f1;
+    border-radius: 8px;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+.file-upload-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #34495e;
+}
+
+.cv-link {
+    display: inline-block;
+    margin-top: 10px;
+    color: #27ae60;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cv-link:hover {
+    text-decoration: underline;
+}
+
+.btn-upload {
+    margin-left: 10px;
+    padding: 5px 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}

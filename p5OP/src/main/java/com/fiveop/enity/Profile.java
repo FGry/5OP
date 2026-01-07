@@ -1,4 +1,5 @@
 package com.fiveop.enity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -24,7 +25,11 @@ public class Profile {
     private String phone;
     @Column(name = "address")
     private String address;
+    @Column(name = "cv_url")
+    private String cvUrl;
     @OneToOne
+    @JsonIgnore
     @JoinColumn(name = "users_id", referencedColumnName = "id")
     private User user;
+
 }

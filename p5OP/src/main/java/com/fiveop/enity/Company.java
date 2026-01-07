@@ -1,4 +1,5 @@
 package com.fiveop.enity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,7 +20,7 @@ public class Company {
     private String name;
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-    @Column(name = "logo", nullable = false)
+    @Column(name = "logo", nullable = false, columnDefinition = "TEXT")
     private String logo;
     @Column(name = "website")
     private String website;
@@ -30,10 +31,12 @@ public class Company {
     private CompanyScale scale;
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @JsonIgnore
     @ToString.Exclude
     private User user;
     @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
     @ToString.Exclude
+    @JsonIgnore
     private List<Job> jobs;
 
 }

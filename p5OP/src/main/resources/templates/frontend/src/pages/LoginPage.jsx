@@ -1,37 +1,28 @@
 import { useState } from 'react';
 import { loginUser } from '../api/authService';
 import { useNavigate, Link } from 'react-router-dom';
+import './LoginPage.css';
 
 const LoginPage = () => {
     const navigate = useNavigate();
-
-    const [credentials, setCredentials] = useState({
-        username: '',
-        password: ''
-    });
-
+    const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
 
     const handleChange = (e) => {
-        setCredentials({
-            ...credentials,
-            [e.target.name]: e.target.value
-        });
+        setCredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-
         try {
             const data = await loginUser(credentials);
             alert("Đăng nhập thành công! Xin chào " + data.username);
 
-            if (data.role === 'ADMIN') {
-                navigate('/admin');
-            } else {
-                navigate('/');
-            }
+            // Chuyển hướng dựa trên Role
+            if (data.role === 'ADMIN') navigate('/admin');
+            else if (data.role === 'EMPLOYER') navigate('/employer');
+            else navigate('/');
 
         } catch (err) {
             console.error(err);
@@ -40,38 +31,24 @@ const LoginPage = () => {
     };
 
     return (
-        <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ddd' }}>
-            <h2>Đăng Nhập</h2>
-
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+        <div className="login-container">
+            <h2 className="login-title">Đăng Nhập</h2>
+            {error && <div className="error-msg">{error}</div>}
 
             <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '10px' }}>
-                    <input
-                        type="text" name="username" placeholder="Tên đăng nhập"
-                        value={credentials.username} onChange={handleChange} required
-                        style={{ width: '100%', padding: '8px' }}
-                    />
+                <div className="form-group">
+                    <input className="form-input" type="text" name="username" placeholder="Tên đăng nhập" value={credentials.username} onChange={handleChange} required />
                 </div>
-
-                <div style={{ marginBottom: '10px' }}>
-                    <input
-                        type="password" name="password" placeholder="Mật khẩu"
-                        value={credentials.password} onChange={handleChange} required
-                        style={{ width: '100%', padding: '8px' }}
-                    />
+                <div className="form-group">
+                    <input className="form-input" type="password" name="password" placeholder="Mật khẩu" value={credentials.password} onChange={handleChange} required />
                 </div>
-
-                <button type="submit" style={{ padding: '10px 20px', cursor: 'pointer', width: '100%' }}>
-                    Đăng Nhập
-                </button>
+                <button type="submit" className="btn-login">Đăng Nhập</button>
             </form>
 
-            <p style={{ marginTop: '10px' }}>
+            <div className="register-link">
                 Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
-            </p>
+            </div>
         </div>
     );
 };
-
 export default LoginPage;

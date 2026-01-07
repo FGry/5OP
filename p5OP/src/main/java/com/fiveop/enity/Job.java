@@ -1,9 +1,11 @@
 package com.fiveop.enity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
@@ -38,9 +40,9 @@ public class Job {
     @Column(name = "status", nullable = false)
     private JobStatus status;
     @Column(name = "deadline")
-    private LocalDate deadLine;
+    private LocalDateTime deadLine;
     @Column(name = "created_at")
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
@@ -48,6 +50,7 @@ public class Job {
     private List<Application> applications;
     @PrePersist
     protected void onCreate(){
+        createdAt = LocalDateTime.now();
         if(status == null){
             status = JobStatus.PENDING;
         }

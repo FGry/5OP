@@ -1,0 +1,76 @@
+/* RegisterPage.css */
+.register-container {
+    max-width: 450px;
+    margin: 50px auto;
+    padding: 2.5rem;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #ecf0f1;
+}
+
+.register-title {
+    color: #2c3e50;
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #34495e;
+}
+
+.form-input, .form-select {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+    outline: none;
+}
+
+.form-input:focus, .form-select:focus {
+    border-color: #e74c3c;
+}
+
+.btn-register {
+    width: 100%;
+    padding: 0.8rem;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 1rem;
+    transition: all 0.2s ease;
+}
+
+.btn-register:hover {
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+    transform: translateY(-2px);
+}
+
+.login-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.95rem;
+    color: #7f8c8d;
+}
+
+.login-link a {
+    color: #e74c3c;
+    text-decoration: none;
+    font-weight: 600;
+}
