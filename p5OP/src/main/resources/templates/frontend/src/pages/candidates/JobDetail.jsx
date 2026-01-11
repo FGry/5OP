@@ -1,205 +1,389 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import api from '../../api/axios';
 import './JobDetail.css';
 
 const JobDetail = () => {
-  // --- States ---
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  // --- 1. STATE QUẢN LÝ DỮ LIỆU ---
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Navbar & User State
+  const [user, setUser] = useState(null);
   const [activeModal, setActiveModal] = useState(null);
+
+  // Job Actions State
   const [isSaved, setIsSaved] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // --- Mock Data (Thay thế cho defaultConfig) ---
-  const jobData = {
-    title: "Senior Frontend Developer",
-    company: "FPT Software",
-    logo: "🏢",
-    location: "Hà Nội",
-    experience: "3-5 năm kinh nghiệm",
-    type: "Full-time",
-    deadline: "31/12/2024",
-    salary: "20-30 triệu VNĐ",
-    description: "Chúng tôi đang tìm kiếm một Senior Frontend Developer có kinh nghiệm để tham gia đội ngũ phát triển sản phẩm. Bạn sẽ làm việc với các công nghệ hiện đại như React, Vue.js và tham gia xây dựng các ứng dụng web quy mô lớn phục vụ hàng triệu người dùng.",
-    requirements: [
-      "3-5 năm kinh nghiệm lập trình Frontend với các dự án thực tế",
-      "Thành thạo HTML5, CSS3, JavaScript (ES6+)",
-      "Có kinh nghiệm với React hoặc Vue.js framework",
-      "Hiểu biết về Responsive Design và Cross-browser compatibility",
-      "Kỹ năng làm việc nhóm tốt, giao tiếp hiệu quả",
-      "Có kinh nghiệm với Git và Agile/Scrum là một lợi thế"
-    ],
-    benefits: [
-      "Mức lương cạnh tranh: 20-30 triệu VNĐ tùy theo năng lực",
-      "Thưởng hiệu suất hàng quý, thưởng cuối năm lên đến 3-4 tháng lương",
-      "Bảo hiểm đầy đủ theo quy định pháp luật + bảo hiểm sức khỏe cao cấp",
-      "Chế độ nghỉ phép 12 ngày/năm + nghỉ lễ theo quy định",
-      "Môi trường làm việc chuyên nghiệp, năng động và thân thiện"
-    ],
-    companyInfo: {
-        size: "1000+ nhân viên",
-        website: "https://www.fpt-software.com",
-        description: "FPT Software là công ty công nghệ hàng đầu Việt Nam, cung cấp các giải pháp chuyển đổi số toàn diện cho doanh nghiệp. Với hơn 30 năm kinh nghiệm, chúng tôi tự hào là đối tác tin cậy của nhiều tập đoàn lớn trên toàn cầu."
-    }
-  };
+  // Apply State
+  const [cvFile, setCvFile] = useState(null);
+  const [cvOption, setCvOption] = useState('upload'); // 'upload' | 'profile'
+  const [isApplying, setIsApplying] = useState(false);
 
-  // --- Handlers ---
+  // --- 2. FETCH DATA ---
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Lấy chi tiết Job
+        const res = await api.get(`/jobs/${id}`);
+        setJob(res.data);
+
+        // Lấy thông tin User (nếu đã login)
+        const token = localStorage.getItem('token');
+        if (token) {
+           const userRes = await api.get('/profile/me');
+           const localUser = JSON.parse(localStorage.getItem('user'));
+           const role = localUser ? localUser.role : 'USER';
+           setUser({ ...userRes.data, role: role });
+
+           // Nếu user có CV trong profile -> Mặc định chọn 'profile'
+           if (userRes.data.cvUrl) {
+               setCvOption('profile');
+           }
+        }
+      } catch (error) {
+        console.error("Lỗi tải dữ liệu:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  // --- 3. HELPER FUNCTIONS ---
   const showToast = (message, color = '#3498db') => {
     setToast({ message, color });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleApply = () => {
-    showToast(<span><i className="fas fa-check-circle me-2"></i>Đơn ứng tuyển của bạn đã được gửi!</span>, '#27ae60');
+  const formatSalary = (min, max) => {
+    if (!min && !max) return 'Thỏa thuận';
+    if (min && !max) return `Từ ${min.toLocaleString()} VNĐ`;
+    if (!min && max) return `Đến ${max.toLocaleString()} VNĐ`;
+    return `${(min / 1000000).toFixed(0)} - ${(max / 1000000).toFixed(0)} Triệu VNĐ`;
   };
 
-  const handleSave = () => {
-    setIsSaved(!isSaved);
-    if (!isSaved) {
-      showToast(<span><i className="fas fa-check-circle me-2"></i>Đã lưu công việc!</span>, '#27ae60');
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
+
+  // --- 4. ACTION HANDLERS ---
+  const handleSave = async () => {
+    if (!user) {
+        showToast('Vui lòng đăng nhập để lưu!', '#e74c3c');
+        return navigate('/login');
+    }
+    try {
+        await api.post(`/activity/save/${id}`);
+        setIsSaved(!isSaved);
+        showToast(
+            <span><i className="fas fa-check-circle me-2"></i>{isSaved ? 'Đã bỏ lưu' : 'Đã lưu công việc!'}</span>,
+            isSaved ? '#e74c3c' : '#27ae60'
+        );
+    } catch (error) {
+        showToast('Lỗi khi thao tác', '#e74c3c');
     }
   };
 
-  const handleContact = () => {
-    setActiveModal('chat');
+  const openApplyModal = () => {
+      if (!user) {
+          showToast('Vui lòng đăng nhập để ứng tuyển!', '#e74c3c');
+          return navigate('/login');
+      }
+      setActiveModal('apply');
   };
 
-  // --- Render Functions cho Modal (Tái sử dụng logic từ JobListing) ---
+  // Xử lý nộp đơn ứng tuyển
+  const handleSubmitApply = async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData();
+
+      // Logic chọn loại CV
+      if (cvOption === 'upload') {
+          if (!cvFile) {
+              showToast('Vui lòng chọn file CV!', '#e74c3c');
+              return;
+          }
+          formData.append('cvFile', cvFile);
+          formData.append('useProfileCv', false);
+      } else {
+          // Kiểm tra lại lần nữa cho chắc
+          if (!user?.cvUrl) {
+               showToast('Hồ sơ chưa có CV. Vui lòng cập nhật hoặc upload mới!', '#e74c3c');
+               return;
+          }
+          formData.append('useProfileCv', true);
+      }
+
+      try {
+          setIsApplying(true);
+          await api.post(`/activity/apply/${id}`, formData);
+
+          showToast(<span><i className="fas fa-check-circle me-2"></i>Ứng tuyển thành công!</span>, '#27ae60');
+          setActiveModal(null);
+          setCvFile(null);
+      } catch (error) {
+          console.error(error);
+          const msg = error.response?.data || 'Lỗi khi ứng tuyển. Vui lòng thử lại!';
+          showToast(msg, '#e74c3c');
+      } finally {
+          setIsApplying(false);
+      }
+  };
+
+  // --- 5. RENDER MODALS ---
+
+  // Modal Menu Profile
+  const renderProfilePanel = () => (
+      <div className="profile-panel" style={{position:'fixed', top:'60px', right:'20px', background:'white', padding:'1.5rem', borderRadius:'12px', boxShadow:'0 4px 20px rgba(0,0,0,0.2)', zIndex:1000}}>
+           <div style={{ textAlign: 'center', padding: '10px' }}>
+              <h5>{user?.fullName}</h5>
+          </div>
+          <div style={{ borderTop: '1px solid #ecf0f1', paddingTop: '1rem' }}>
+              <div onClick={() => navigate('/')} className="d-block py-2" style={{cursor:'pointer'}}>
+                  <i className="fas fa-home me-2"></i>Trang chủ
+              </div>
+              <div onClick={() => navigate('/profile')} className="d-block py-2" style={{cursor:'pointer'}}>
+                  <i className="fas fa-id-card me-2"></i>Xem hồ sơ
+              </div>
+              {user?.role === 'USER' && (
+                  <>
+                      <div onClick={() => navigate('/saved-jobs')} className="d-block py-2" style={{cursor:'pointer'}}>
+                          <i className="fas fa-heart me-2"></i>Công việc đã lưu
+                      </div>
+                      <div onClick={() => navigate('/applied-jobs')} className="d-block py-2" style={{cursor:'pointer'}}>
+                          <i className="fas fa-history me-2"></i>Lịch sử ứng tuyển
+                      </div>
+                  </>
+              )}
+              <div onClick={handleLogout} className="d-block py-2 text-danger" style={{cursor:'pointer'}}>
+                  <i className="fas fa-sign-out-alt me-2"></i>Đăng xuất
+              </div>
+          </div>
+      </div>
+  );
+
   const renderChatWindow = () => (
     <div className="chat-window">
-        {/* Header Chat */}
-        <div style={{ background: 'linear-gradient(135deg, #27ae60, #229954)', color: 'white', padding: '1rem', borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <h6 style={{ margin: 0, fontWeight: 700 }}>Nhắn tin với nhà tuyển dụng</h6>
-                <small style={{ opacity: 0.9 }}>Đang hoạt động</small>
-            </div>
-            <button onClick={() => setActiveModal(null)} style={{ border: 'none', background: 'rgba(255,255,255,0.2)', color: 'white', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '1.2rem' }}>&times;</button>
+        <div style={{ background: '#27ae60', color: 'white', padding: '10px', borderRadius: '10px 10px 0 0', display:'flex', justifyContent:'space-between'}}>
+            <span>Chat với nhà tuyển dụng</span>
+            <button onClick={()=>setActiveModal(null)} style={{background:'none', border:'none', color:'white', cursor:'pointer'}}>x</button>
         </div>
-        {/* Body Chat */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', background: '#f8f9fa' }}>
-            <div style={{ marginBottom: '1rem' }}>
-                <div style={{ background: 'white', padding: '0.75rem', borderRadius: '12px 12px 12px 0', maxWidth: '80%', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                    <p style={{ margin: 0, color: '#2c3e50', fontSize: '0.9rem' }}>Xin chào! Cảm ơn bạn đã quan tâm. Tôi có thể giúp gì cho bạn?</p>
-                    <small style={{ color: '#7f8c8d', fontSize: '0.75rem' }}>Vừa xong</small>
-                </div>
-            </div>
-        </div>
-        {/* Input Chat */}
-        <div style={{ padding: '1rem', borderTop: '1px solid #ecf0f1', display: 'flex', gap: '0.5rem' }}>
-            <input type="text" placeholder="Nhập tin nhắn..." style={{ flex: 1, border: '2px solid #ecf0f1', borderRadius: '20px', padding: '0.5rem 1rem', outline: 'none', fontSize: '0.9rem' }} />
-            <button style={{ background: '#27ae60', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="fas fa-paper-plane"></i>
-            </button>
+        <div style={{padding:'20px', height:'200px', display:'flex', alignItems:'center', justifyContent:'center'}}>
+            Tính năng đang phát triển...
         </div>
     </div>
   );
 
-  // (Bạn có thể thêm renderNotificationPanel và renderProfilePanel tương tự như ở JobListing.jsx nếu cần)
+  // Modal Ứng tuyển (Đã chỉnh sửa vị trí nút)
+  const renderApplyModal = () => (
+      <div className="custom-modal-overlay" onClick={() => setActiveModal(null)}>
+          <div className="detail-panel" onClick={(e) => e.stopPropagation()} style={{minWidth: '450px'}}>
+              <h4 style={{marginBottom: '20px', color: '#2c3e50', borderBottom:'1px solid #eee', paddingBottom:'10px', textAlign: 'center'}}>
+                  Ứng tuyển: {job.title}
+              </h4>
+              <form onSubmit={handleSubmitApply}>
+
+                  {/* Option 1: Dùng CV Profile */}
+                  <div className="mb-3 p-3 rounded" style={{border: cvOption === 'profile' ? '1px solid #3498db' : '1px solid #eee', background: cvOption === 'profile' ? '#f7fbff' : 'white'}}>
+                      <div className="form-check">
+                          <input
+                              className="form-check-input"
+                              type="radio"
+                              name="cvOption"
+                              id="optProfile"
+                              checked={cvOption === 'profile'}
+                              onChange={() => setCvOption('profile')}
+                              disabled={!user?.cvUrl}
+                          />
+                          <label className="form-check-label fw-bold" htmlFor="optProfile" style={{cursor:'pointer'}}>
+                              Sử dụng CV trong hồ sơ
+                          </label>
+                      </div>
+                      <div className="ms-4 mt-2" style={{fontSize: '0.9rem'}}>
+                          {user?.cvUrl ? (
+                              <div className="text-success">
+                                  <i className="fas fa-check-circle me-1"></i> Đã có CV:
+                                  <a href={`http://localhost:8080${user.cvUrl}`} target="_blank" rel="noreferrer" className="ms-1 fw-bold text-decoration-none" onClick={(e)=>e.stopPropagation()}>Xem trước</a>
+                              </div>
+                          ) : (
+                              <div className="text-danger">
+                                  <i className="fas fa-exclamation-circle me-1"></i> Bạn chưa cập nhật CV.
+                                  <span className="text-primary ms-1" style={{cursor:'pointer', textDecoration:'underline'}} onClick={()=>navigate('/profile')}>Cập nhật ngay</span>
+                              </div>
+                          )}
+                      </div>
+                  </div>
+
+                  {/* Option 2: Upload CV Mới */}
+                  <div className="mb-3 p-3 rounded" style={{border: cvOption === 'upload' ? '1px solid #3498db' : '1px solid #eee', background: cvOption === 'upload' ? '#f7fbff' : 'white'}}>
+                      <div className="form-check mb-2">
+                          <input
+                              className="form-check-input"
+                              type="radio"
+                              name="cvOption"
+                              id="optUpload"
+                              checked={cvOption === 'upload'}
+                              onChange={() => setCvOption('upload')}
+                          />
+                          <label className="form-check-label fw-bold" htmlFor="optUpload" style={{cursor:'pointer'}}>
+                              Tải lên CV mới
+                          </label>
+                      </div>
+                      {cvOption === 'upload' && (
+                          <input
+                              type="file"
+                              className="form-control"
+                              onChange={(e) => setCvFile(e.target.files[0])}
+                              accept=".pdf,.doc,.docx"
+                          />
+                      )}
+                  </div>
+
+                  {/* --- KHU VỰC NÚT BẤM (ĐÃ CHỈNH SỬA) --- */}
+                  <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '12px',
+                      marginTop: '25px'
+                  }}>
+                      {/* Nút Nộp hồ sơ (Lên trên) */}
+                      <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={isApplying}
+                          style={{
+                              background: '#27ae60',
+                              border: 'none',
+                              padding: '10px 40px',
+                              borderRadius: '50px',
+                              fontWeight: 'bold',
+                              fontSize: '1.1rem',
+                              width: '100%',
+                              boxShadow: '0 4px 10px rgba(39, 174, 96, 0.4)'
+                          }}
+                      >
+                          {isApplying ? <><i className="fas fa-spinner fa-spin me-2"></i>Đang gửi...</> : 'Nộp hồ sơ ngay'}
+                      </button>
+
+                      {/* Nút Huỷ (Xuống dưới - dạng text link) */}
+                      <button
+                          type="button"
+                          onClick={() => setActiveModal(null)}
+                          style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#95a5a6',
+                              textDecoration: 'underline',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem'
+                          }}
+                      >
+                          Huỷ bỏ
+                      </button>
+                  </div>
+
+              </form>
+          </div>
+      </div>
+  );
+
+  // --- 6. MAIN RENDER ---
+  if (loading) return <div style={{textAlign:'center', padding:'50px'}}>Đang tải dữ liệu...</div>;
+  if (!job) return <div style={{textAlign:'center', padding:'50px'}}>Không tìm thấy công việc!</div>;
 
   return (
     <div className="main-wrapper">
-      {/* 1. Navbar (Tái sử dụng) */}
-      <Navbar onOpenModal={setActiveModal} />
+      <Navbar onOpenModal={setActiveModal} user={user} />
 
-      {/* 2. Main Content */}
       <section className="content-section">
         <div className="container">
           <div className="row">
-
-            {/* Cột trái: Thông tin chi tiết */}
+            {/* Cột trái: Thông tin Job */}
             <div className="col-lg-8">
-              {/* Job Header */}
               <div className="job-header-card">
                 <div className="d-flex align-items-start gap-3 mb-3">
-                  <div className="company-logo-large">{jobData.logo}</div>
+                  <div className="company-logo-large">
+                     {job.company?.logo ? <img src={job.company.logo} alt="logo" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : "🏢"}
+                  </div>
                   <div className="flex-grow-1">
-                    <h1 className="job-title-main">{jobData.title}</h1>
-                    <h2 className="company-name-main">{jobData.company}</h2>
+                    <h1 className="job-title-main">{job.title}</h1>
+                    <h2 className="company-name-main">{job.company?.name}</h2>
                     <div className="d-flex flex-wrap gap-3 mb-3">
-                      <div className="meta-item"><i className="fas fa-map-marker-alt"></i> {jobData.location}</div>
-                      <div className="meta-item"><i className="fas fa-briefcase"></i> {jobData.experience}</div>
-                      <div className="meta-item"><i className="fas fa-clock"></i> {jobData.type}</div>
-                      <div className="meta-item"><i className="fas fa-calendar-alt"></i> Hạn: {jobData.deadline}</div>
+                      <div className="meta-item"><i className="fas fa-map-marker-alt"></i> {job.location}</div>
+                      <div className="meta-item"><i className="fas fa-briefcase"></i> {job.type}</div>
+                      <div className="meta-item"><i className="fas fa-clock"></i> Hạn: {job.deadline ? new Date(job.deadline).toLocaleDateString('vi-VN') : 'Không giới hạn'}</div>
                     </div>
-                    <div className="salary-badge"><i className="fas fa-dollar-sign me-2"></i> {jobData.salary}</div>
+                    <div className="salary-badge"><i className="fas fa-dollar-sign me-2"></i> {formatSalary(job.salaryMin, job.salaryMax)}</div>
                   </div>
                 </div>
+
                 <div className="d-flex gap-2 mt-3">
-                  <button className="btn-apply" onClick={handleApply}>
+                  <button className="btn-apply" onClick={openApplyModal}>
                     <i className="fas fa-paper-plane me-2"></i>Ứng tuyển ngay
                   </button>
                   <button className={`btn-save ${isSaved ? 'saved' : ''}`} onClick={handleSave}>
-                    <i className={`${isSaved ? 'fas' : 'far'} fa-bookmark me-1`}></i>
-                    {isSaved ? 'Đã lưu' : 'Lưu tin'}
+                    <i className={`${isSaved ? 'fas' : 'far'} fa-bookmark me-1`}></i> {isSaved ? 'Đã lưu' : 'Lưu tin'}
                   </button>
-                  <button className="btn-contact" onClick={handleContact}>
+                  <button className="btn-contact" onClick={() => setActiveModal('chat')}>
                     <i className="fas fa-comment-dots me-2"></i>Liên hệ
                   </button>
                 </div>
               </div>
 
-              {/* Description */}
               <div className="info-card">
                 <h3 className="info-card-title"><i className="fas fa-file-alt"></i> Mô tả công việc</h3>
-                <p className="info-card-text">{jobData.description}</p>
+                <p className="info-card-text" style={{whiteSpace: 'pre-line'}}>{job.description}</p>
               </div>
 
-              {/* Requirements */}
               <div className="info-card">
-                <h3 className="info-card-title"><i className="fas fa-clipboard-check"></i> Yêu cầu công việc</h3>
-                <ul className="info-list">
-                  {jobData.requirements.map((req, idx) => <li key={idx}>{req}</li>)}
-                </ul>
+                <h3 className="info-card-title"><i className="fas fa-clipboard-check"></i> Yêu cầu</h3>
+                <p className="info-card-text" style={{whiteSpace: 'pre-line'}}>{job.requirements}</p>
               </div>
 
-              {/* Benefits */}
               <div className="info-card">
                 <h3 className="info-card-title"><i className="fas fa-gift"></i> Quyền lợi</h3>
-                <ul className="info-list">
-                  {jobData.benefits.map((ben, idx) => <li key={idx}>{ben}</li>)}
-                </ul>
+                <p className="info-card-text" style={{whiteSpace: 'pre-line'}}>{job.benefits}</p>
               </div>
             </div>
 
-            {/* Cột phải: Sidebar công ty */}
+            {/* Cột phải: Thông tin Công ty */}
             <div className="col-lg-4">
               <div className="company-sidebar">
-                <h3 className="info-card-title"><i className="fas fa-building"></i> Thông tin công ty</h3>
-                <div className="company-logo-sidebar">{jobData.logo}</div>
-                <h4 className="company-name-sidebar">{jobData.company}</h4>
+                <h3 className="info-card-title"><i className="fas fa-building"></i> Công ty</h3>
+                <div className="company-logo-sidebar">
+                    {job.company?.logo ? <img src={job.company.logo} alt="logo" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : "🏢"}
+                </div>
+                <h4 className="company-name-sidebar">{job.company?.name}</h4>
 
                 <div style={{ marginBottom: '1.5rem' }}>
                   <div className="company-info-item">
                     <i className="fas fa-map-marker-alt"></i>
-                    <div>
-                      <strong className="company-info-label">Địa điểm:</strong>
-                      <span className="company-info-value">{jobData.location}</span>
-                    </div>
-                  </div>
-                  <div className="company-info-item">
-                    <i className="fas fa-users"></i>
-                    <div>
-                      <strong className="company-info-label">Quy mô:</strong>
-                      <span className="company-info-value">{jobData.companyInfo.size}</span>
-                    </div>
+                    <div><strong>Địa chỉ:</strong> {job.company?.address || job.location}</div>
                   </div>
                   <div className="company-info-item">
                     <i className="fas fa-globe"></i>
                     <div>
-                      <strong className="company-info-label">Website:</strong>
-                      <a href={jobData.companyInfo.website} target="_blank" rel="noopener noreferrer" className="company-info-link">
-                        {jobData.companyInfo.website}
-                      </a>
+                        <strong>Website:</strong>
+                        <a href={job.company?.website} target="_blank" rel="noreferrer" style={{marginLeft:'5px'}}>{job.company?.website || 'Đang cập nhật'}</a>
                     </div>
                   </div>
                 </div>
 
                 <div className="company-desc-section">
-                  <h5 className="company-desc-title">Giới thiệu công ty:</h5>
-                  <p className="company-desc-text">{jobData.companyInfo.description}</p>
+                  <h5 className="company-desc-title">Giới thiệu:</h5>
+                  <p className="company-desc-text">{job.company?.description}</p>
                 </div>
-
-                <button className="btn-view-jobs">
-                    <i className="fas fa-building me-2"></i>Xem tất cả việc làm
-                </button>
               </div>
             </div>
 
@@ -207,34 +391,17 @@ const JobDetail = () => {
         </div>
       </section>
 
-      {/* 3. Footer (Có thể tách thành component riêng sau này) */}
       <footer className="footer-section">
-        <div className="container">
-          <div className="row">
-            <div className="col-lg-4 mb-4">
-              <h5 className="footer-title">Về 5OP Jobs</h5>
-              <p className="footer-description">5OP Jobs là nền tảng tuyển dụng hàng đầu Việt Nam.</p>
-              <div className="footer-social">
-                 <a href="#" className="social-icon"><i className="fab fa-facebook-f"></i></a>
-                 <a href="#" className="social-icon"><i className="fab fa-linkedin-in"></i></a>
-              </div>
-            </div>
-            {/* Các cột footer khác... */}
-          </div>
-          <div className="footer-bottom">
-            <p>© 2024 5OP Jobs. Bản quyền thuộc về Công ty Cổ phần 5OP Technology.</p>
-          </div>
-        </div>
+        <div className="container"><p className="text-center text-white">© 2024 5OP Jobs</p></div>
       </footer>
 
-      {/* 4. Modals & Toasts */}
+      {/* RENDER MODALS & POPUPS */}
       {activeModal === 'chat' && renderChatWindow()}
+      {activeModal === 'apply' && renderApplyModal()}
+      {activeModal === 'profile' && renderProfilePanel()}
 
-      {toast && (
-        <div className="toast-message" style={{ backgroundColor: toast.color }}>
-            {toast.message}
-        </div>
-      )}
+      {/* TOAST MESSAGE */}
+      {toast && <div className="toast-message" style={{ backgroundColor: toast.color }}>{toast.message}</div>}
     </div>
   );
 };

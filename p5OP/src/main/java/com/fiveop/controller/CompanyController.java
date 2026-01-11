@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/company")
 @RequiredArgsConstructor
@@ -46,5 +48,16 @@ public class CompanyController {
         } catch (Exception e){
             return ResponseEntity.badRequest().body("Tên công ty có thể đã tồn tại hoặc dữ liệu không hợp lệ!");
         }
+    }
+    @GetMapping("/public")
+    public ResponseEntity<?> getAllCompanies(){
+        List<Company> companies = companyRepository.findAll();
+        return ResponseEntity.ok(companies);
+    }
+    @GetMapping("{id}")
+    public ResponseEntity<?> getCompanyDetail(@PathVariable Long id){
+        return companyRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

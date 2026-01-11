@@ -7,6 +7,11 @@ import CandidateProfile from './pages/candidates/CandidateProfile'
 import EmployerDashboard from './pages/recruiters/EmployerDashboard'
 import CompanyProfile from './pages/recruiters/CompanyProfile'
 import PostJob from './pages/recruiters/PostJob'
+import JobDetail from './pages/candidates/JobDetail'
+import CompanyList from './pages/recruiters/CompanyList'
+import CompanyDetail from './pages/recruiters/CompanyDetail'
+import SaveJobs from './pages/candidates/SaveJobs'
+import AppliedJobs from './pages/candidates/AppliedJobs'
 function App() {
 
   return (
@@ -18,6 +23,11 @@ function App() {
           <Route path="/employer" element={<EmployerDashboard />} />
           <Route path="/employer/company" element={<CompanyProfile />} />
           <Route path="/employer/post" element={<PostJob />} />
+          <Route path="/jobs/:id" element={<JobDetail />} />
+          <Route path="/company" element={<CompanyList />} />
+          <Route path="/company/:id" element={<CompanyDetail />} />
+          <Route path="/saved-jobs" element={<SaveJobs />} />
+          <Route path="/applied-jobs" element={<AppliedJobs />} />
     </Routes>
   )
 }

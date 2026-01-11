@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../../api/axios'; // Đảm bảo đường dẫn import đúng tới file axios của bạn
+import api from '../../api/axios';
 import './MainInterface.css';
 
 const MainInterface = () => {
   const navigate = useNavigate();
 
-  // --- STATE QUẢN LÝ UI ---
+  // --- 1. STATE QUẢN LÝ GIAO DIỆN ---
   const [currentSlide, setCurrentSlide] = useState(0);
   const slides = [
     { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
@@ -15,47 +15,23 @@ const MainInterface = () => {
   ];
 
   const [activeModal, setActiveModal] = useState(null);
-  const [selectedJob, setSelectedJob] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState(null);
 
-  // --- STATE DỮ LIỆU ---
-  const [user, setUser] = useState(null); // Thông tin user đang đăng nhập
-  const [jobs, setJobs] = useState([]);   // Danh sách việc làm từ API
+  // --- 2. STATE DỮ LIỆU ---
+  const [user, setUser] = useState(null);
+  const [jobs, setJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
 
-  // Dữ liệu cá nhân (chỉ dành cho Ứng viên)
   const [savedJobIds, setSavedJobIds] = useState([]);
-  const [savedJobList, setSavedJobList] = useState([]);
-  const [appliedJobList, setAppliedJobList] = useState([]);
 
-  // --- HELPER FUNCTIONS ---
-
-  // Format hiển thị mức lương
-  const formatSalary = (min, max) => {
-      if (!min && !max) return 'Thỏa thuận';
-      if (min && !max) return `Từ ${min.toLocaleString()} VNĐ`;
-      if (!min && max) return `Đến ${max.toLocaleString()} VNĐ`;
-      return `${(min/1000000).toFixed(0)} - ${(max/1000000).toFixed(0)} Triệu VNĐ`;
-  };
-
-  // Format hiển thị loại hình công việc
-  const formatType = (type) => {
-      const types = {
-          'FULL_TIME': 'Toàn thời gian',
-          'PART_TIME': 'Bán thời gian',
-          'INTERNSHIP': 'Thực tập',
-          'FREELANCE': 'Freelance',
-          'REMOTE': 'Làm từ xa',
-          'HYBRID': 'Linh hoạt'
-      };
-      return types[type] || type;
-  };
+  // --- 3. STATE TÌM KIẾM & BỘ LỌC ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterSalary, setFilterSalary] = useState('');
 
   // --- EFFECTS ---
-
-  // Slide chạy tự động
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -63,21 +39,32 @@ const MainInterface = () => {
     return () => clearInterval(interval);
   }, [slides.length]);
 
-  // Load dữ liệu khi vào trang
   useEffect(() => {
     checkLoginStatus();
-    fetchJobs(); // Gọi API lấy danh sách việc làm
+    fetchJobs();
   }, []);
 
-  // --- API CALLS ---
-
+  // --- API FUNCTIONS ---
   const fetchJobs = async () => {
+      setLoadingJobs(true);
       try {
-          // Gọi API public để lấy danh sách job (đã sắp xếp mới nhất ở Backend)
-          const res = await api.get('/jobs/public');
-          setJobs(res.data);
+          const res = await api.get('/jobs/search', {
+              params: {
+                  keyword: searchQuery || null,
+                  location: (filterLocation === 'Tất cả' || filterLocation === '') ? null : filterLocation,
+                  type: (filterType === 'Tất cả' || filterType === '') ? null : filterType,
+                  salary: (filterSalary === 'Tất cả' || filterSalary === '') ? null : filterSalary
+              }
+          });
+          // Kiểm tra an toàn dữ liệu mảng
+          if (Array.isArray(res.data)) {
+              setJobs(res.data);
+          } else {
+              setJobs([]);
+          }
       } catch (error) {
           console.error("Lỗi tải danh sách việc làm:", error);
+          setJobs([]);
       } finally {
           setLoadingJobs(false);
       }
@@ -90,16 +77,12 @@ const MainInterface = () => {
               const res = await api.get('/profile/me');
               const localUser = JSON.parse(localStorage.getItem('user'));
               const role = localUser ? localUser.role : 'USER';
-
               setUser({ ...res.data, role: role });
 
-              // Nếu là Ứng viên thì tải thêm danh sách đã lưu/đã ứng tuyển
               if (role === 'USER') {
                   fetchSavedJobs();
-                  fetchAppliedJobs();
               }
           } catch (error) {
-              console.error("Token lỗi hoặc hết hạn:", error);
               localStorage.removeItem('token');
               localStorage.removeItem('user');
               setUser(null);
@@ -111,17 +94,10 @@ const MainInterface = () => {
     if (!localStorage.getItem('token')) return;
     try {
       const res = await api.get('/activity/saved');
-      setSavedJobList(res.data);
-      const ids = res.data.map(item => item.id);
-      setSavedJobIds(ids);
-    } catch (err) { console.error(err); }
-  };
-
-  const fetchAppliedJobs = async () => {
-    if (!localStorage.getItem('token')) return;
-    try {
-      const res = await api.get('/activity/applied');
-      setAppliedJobList(res.data);
+      if (Array.isArray(res.data)) {
+        const ids = res.data.map(item => item.id); // Lưu ý: item là Job do backend trả về List<Job>
+        setSavedJobIds(ids);
+      }
     } catch (err) { console.error(err); }
   };
 
@@ -132,7 +108,6 @@ const MainInterface = () => {
         navigate('/login');
         return;
     }
-    // Chặn Nhà tuyển dụng lưu job
     if (user.role === 'EMPLOYER') {
         showToast('Nhà tuyển dụng không thể lưu công việc!', '#e74c3c');
         return;
@@ -147,8 +122,13 @@ const MainInterface = () => {
         setSavedJobIds(prev => [...prev, jobId]);
         showToast('Đã lưu công việc!', '#27ae60');
       }
-      fetchSavedJobs(); // Refresh danh sách ngầm
-    } catch (error) { showToast('Lỗi khi lưu công việc', '#e74c3c'); }
+    } catch (error) {
+      showToast('Lỗi khi thao tác!', '#e74c3c');
+    }
+  };
+
+  const handleSearch = () => {
+      fetchJobs();
   };
 
   const handleLogout = () => {
@@ -160,250 +140,247 @@ const MainInterface = () => {
       navigate('/login');
   };
 
-  // --- UI RENDERING ---
-
+  // --- HELPER FUNCTIONS ---
   const showToast = (message, color = '#3498db') => {
     setToast({ message, color });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSearch = () => setActiveModal('search');
+  const formatSalary = (min, max) => {
+      if (!min && !max) return 'Thỏa thuận';
+      if (min && !max) return `Từ ${min.toLocaleString()} VNĐ`;
+      if (!min && max) return `Đến ${max.toLocaleString()} VNĐ`;
+      return `${(min/1000000).toFixed(0)} - ${(max/1000000).toFixed(0)} Triệu VNĐ`;
+  };
 
-  // Modal: Hồ sơ cá nhân (Menu Dropdown)
+  const formatType = (type) => {
+      const types = {'FULL_TIME': 'Toàn thời gian', 'PART_TIME': 'Bán thời gian', 'INTERNSHIP': 'Thực tập', 'FREELANCE': 'Freelance', 'REMOTE': 'Remote', 'HYBRID': 'Hybrid'};
+      return types[type] || type;
+  };
+
+  // --- RENDER MODALS ---
+
+  // MENU PROFILE (Đã cập nhật giống các trang khác)
   const renderProfilePanel = () => (
     <div className="profile-panel">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h5 style={{ margin: 0, color: '#2c3e50', fontWeight: 700 }}>Hồ sơ cá nhân</h5>
-        <button onClick={() => setActiveModal(null)} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#7f8c8d' }}>&times;</button>
+      <div style={{ textAlign: 'center', padding: '10px' }}>
+          <h5>{user?.fullName}</h5>
+          {user?.role === 'EMPLOYER' && <span className="badge bg-primary">Nhà tuyển dụng</span>}
       </div>
-
-      <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #e74c3c, #c0392b)', margin: '0 auto 1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', color: 'white' }}>
-            {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
-        </div>
-        <h6 style={{ margin: 0, color: '#2c3e50', fontWeight: 700 }}>
-            {user?.fullName || 'Người dùng'}
-        </h6>
-        {user?.role === 'EMPLOYER' ?
-            <span className="badge bg-primary" style={{margin:'5px auto', display:'block', width:'fit-content', padding:'5px 10px', borderRadius:'10px', color:'white', fontSize:'0.8rem'}}>Nhà tuyển dụng</span> :
-            <span className="badge bg-success" style={{margin:'5px auto', display:'block', width:'fit-content', padding:'5px 10px', borderRadius:'10px', color:'white', fontSize:'0.8rem'}}>Ứng viên</span>
-        }
-      </div>
-
       <div style={{ borderTop: '1px solid #ecf0f1', paddingTop: '1rem' }}>
-        <div onClick={() => {navigate('/profile'); setActiveModal(null)}} className="d-block py-2 text-decoration-none" style={{ color: '#34495e', cursor: 'pointer' }}>
-            Xem hồ sơ đầy đủ
+        <div onClick={() => navigate('/')} className="d-block py-2" style={{cursor:'pointer', fontWeight: 'bold'}}>
+            <i className="fas fa-home me-2"></i>Trang chủ
         </div>
 
-        {/* Menu cho Ứng viên */}
+        <div onClick={() => navigate('/profile')} className="d-block py-2" style={{cursor:'pointer'}}>
+            <i className="fas fa-id-card me-2"></i>Xem hồ sơ
+        </div>
+
         {user?.role === 'USER' && (
             <>
-                <div onClick={() => { fetchSavedJobs(); setActiveModal('saved-jobs'); }} className="d-block py-2 text-decoration-none" style={{ color: '#34495e', cursor: 'pointer' }}>
-                    Công việc đã lưu
+                <div onClick={() => navigate('/saved-jobs')} className="d-block py-2" style={{cursor:'pointer'}}>
+                    <i className="fas fa-heart me-2"></i>Công việc đã lưu
                 </div>
-                <div onClick={() => { fetchAppliedJobs(); setActiveModal('applied-jobs'); }} className="d-block py-2 text-decoration-none" style={{ color: '#34495e', cursor: 'pointer' }}>
-                    Lịch sử ứng tuyển
+                <div onClick={() => navigate('/applied-jobs')} className="d-block py-2" style={{cursor:'pointer'}}>
+                    <i className="fas fa-history me-2"></i>Lịch sử ứng tuyển
                 </div>
             </>
         )}
 
-        {/* Menu cho Nhà tuyển dụng */}
         {user?.role === 'EMPLOYER' && (
-            <div onClick={() => navigate('/employer')} className="d-block py-2 text-decoration-none" style={{ color: '#2c3e50', fontWeight: 'bold', cursor: 'pointer' }}>
-                <i className="fas fa-chart-line me-2"></i>Trang quản lý
+            <div onClick={() => navigate('/employer')} className="d-block py-2" style={{cursor:'pointer', fontWeight:'bold'}}>
+                <i className="fas fa-briefcase me-2"></i>Trang quản lý
             </div>
         )}
 
-        <div onClick={handleLogout} className="d-block py-2 text-decoration-none" style={{ color: '#e74c3c', fontWeight: 600, cursor: 'pointer' }}>
-            Đăng xuất
+        <div onClick={handleLogout} className="d-block py-2 text-danger" style={{cursor:'pointer'}}>
+            <i className="fas fa-sign-out-alt me-2"></i>Đăng xuất
         </div>
       </div>
     </div>
   );
 
-  // Modal: Chi tiết công việc
-  const renderJobDetail = () => (
-      <>
-        <div className="custom-modal-overlay" onClick={() => setSelectedJob(null)}></div>
-        <div className="detail-panel">
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                <h4 style={{color:'#2c3e50', fontWeight:'bold', margin:0}}>{selectedJob?.title}</h4>
-                <button onClick={() => setSelectedJob(null)} style={{border:'none', background:'none', fontSize:'1.5rem', cursor:'pointer'}}>&times;</button>
-            </div>
-            <p style={{color:'#7f8c8d', fontWeight:'600', marginTop:'5px'}}>{selectedJob?.company?.name}</p>
-
-            <div style={{margin:'20px 0', borderTop:'1px solid #eee', paddingTop:'15px'}}>
-                <h5 style={{color:'#2c3e50', fontWeight:'bold'}}>Mô tả công việc:</h5>
-                <p style={{whiteSpace: 'pre-line', color:'#34495e'}}>{selectedJob?.description}</p>
-
-                <h5 style={{marginTop:'15px', color:'#2c3e50', fontWeight:'bold'}}>Yêu cầu ứng viên:</h5>
-                <p style={{whiteSpace: 'pre-line', color:'#34495e'}}>{selectedJob?.requirements}</p>
-
-                <h5 style={{marginTop:'15px', color:'#2c3e50', fontWeight:'bold'}}>Quyền lợi:</h5>
-                <p style={{whiteSpace: 'pre-line', color:'#34495e'}}>{selectedJob?.benefits}</p>
-
-                <div style={{marginTop:'15px', fontStyle:'italic', color:'#7f8c8d'}}>
-                    Địa điểm: {selectedJob?.location} • Loại hình: {formatType(selectedJob?.type)}
-                </div>
-            </div>
-
-            {/* Chỉ hiện nút Ứng tuyển cho Ứng viên */}
-            {user?.role !== 'EMPLOYER' && (
-                <button style={{width:'100%', padding:'12px', background:'#e74c3c', color:'white', border:'none', borderRadius:'8px', fontWeight:'bold', fontSize:'1rem', cursor:'pointer'}}>
-                    Ứng tuyển ngay
-                </button>
-            )}
+  const renderChatWindow = () => (
+      <div className="chat-window">
+        <div style={{ background: '#27ae60', color: 'white', padding: '10px', borderRadius: '10px 10px 0 0', display:'flex', justifyContent:'space-between'}}>
+            <span>Chat</span>
+            <button onClick={()=>setActiveModal(null)} style={{background:'none', border:'none', color:'white', cursor:'pointer'}}>x</button>
         </div>
-      </>
-  );
-
-  // Modal: Thông tin công ty
-  const renderCompanyInfo = () => (
-      <>
-        <div className="custom-modal-overlay" onClick={() => setSelectedCompany(null)}></div>
-        <div className="detail-panel" style={{textAlign:'center'}}>
-            <button onClick={() => setSelectedCompany(null)} style={{position:'absolute', right:'20px', top:'20px', border:'none', background:'none', fontSize:'1.5rem', cursor:'pointer'}}>&times;</button>
-            <div style={{marginBottom:'1rem'}}>
-                {selectedCompany?.logo ?
-                    <img src={selectedCompany.logo} alt="logo" style={{width:'100px', height:'100px', objectFit:'cover', borderRadius:'15px'}} onError={(e)=>e.target.style.display='none'}/>
-                    : <div style={{fontSize:'3rem'}}>🏢</div>
-                }
-            </div>
-            <h4 style={{fontWeight:'bold', color:'#2c3e50'}}>{selectedCompany?.name}</h4>
-            <p style={{color:'#7f8c8d'}}>{selectedCompany?.website}</p>
-            <p>{selectedCompany?.description}</p>
-        </div>
-      </>
-  );
-
-  // Các Modal phụ khác (Chat, Notification, Saved List...)
-  const renderSavedJobsModal = () => (
-    <>
-      <div className="custom-modal-overlay" onClick={() => setActiveModal(null)}></div>
-      <div className="detail-panel">
-        <h4>Công việc đã lưu</h4>
-        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-          {savedJobList.length === 0 ? <p style={{textAlign:'center', color:'#999'}}>Chưa lưu công việc nào.</p> : savedJobList.map(job => (
-             <div key={job.id} style={{ padding: '10px', borderBottom: '1px solid #eee' }}>{job.title} - {job.company?.name}</div>
-          ))}
+        <div style={{padding:'20px', height:'400px', display:'flex', alignItems:'center', justifyContent:'center'}}>
+            Tính năng đang phát triển...
         </div>
       </div>
-    </>
   );
 
-  const renderAppliedJobsModal = () => (/* Code hiển thị lịch sử ứng tuyển */ <></>);
-  const renderChatWindow = () => (<div className="chat-window"><div style={{padding:'1rem'}}>Hệ thống chat đang bảo trì</div></div>);
-  const renderNotificationPanel = () => (<div className="notification-panel"><h5>Thông báo</h5><p>Chưa có thông báo mới</p></div>);
+  const renderNotificationPanel = () => (<div className="notification-panel">Thông báo (Trống)</div>);
+
+  const renderCompanyInfo = () => (
+      <div className="custom-modal-overlay" onClick={()=>setSelectedCompany(null)}>
+          <div className="detail-panel" onClick={(e)=>e.stopPropagation()}>
+              <h4>{selectedCompany?.name}</h4>
+              <p><strong>Địa chỉ:</strong> {selectedCompany?.address || 'Chưa cập nhật'}</p>
+              <p><strong>Website:</strong> <a href={selectedCompany?.website} target="_blank" rel="noreferrer">{selectedCompany?.website || 'Chưa cập nhật'}</a></p>
+              <hr/>
+              <p>{selectedCompany?.description}</p>
+              <button className="btn btn-secondary mt-3" onClick={()=>setSelectedCompany(null)}>Đóng</button>
+          </div>
+      </div>
+  );
 
   // --- MAIN RENDER ---
   return (
     <div className="main-wrapper">
-      {/* Navbar */}
+      {/* 1. Navbar */}
       <nav className="navbar navbar-expand-lg navbar-custom">
         <div className="container">
-          <Link className="navbar-brand" to="/" id="site-title">5OP <span>Jobs</span></Link>
-          <div className="navbar-menu d-none d-lg-flex">
-            <button className="nav-menu-item active"><i className="fas fa-home"></i> <span>Trang chủ</span></button>
-            <button className="nav-menu-item"><i className="fas fa-briefcase"></i> <span>Việc làm</span></button>
-            <button className="nav-menu-item"><i className="fas fa-building"></i> <span>Công ty</span></button>
-            <button className="nav-menu-item"><i className="fas fa-newspaper"></i> <span>Blog</span></button>
+          <Link className="navbar-brand" to="/" onClick={() => window.location.href='/'}>5OP <span>Jobs</span></Link>
+
+          {/* MENU NAVBAR */}
+          <div className="navbar-menu d-none d-lg-flex" style={{flex: 1, justifyContent: 'center', gap: '20px'}}>
+              <button className="nav-menu-item active" style={{background:'none', border:'none'}} onClick={() => window.location.href='/'}>
+                  <i className="fas fa-home"></i> <span style={{display:'block'}}>Trang chủ</span>
+              </button>
+              <button className="nav-menu-item" style={{background:'none', border:'none'}} onClick={() => navigate('/jobs')}>
+                  <i className="fas fa-briefcase"></i> <span style={{display:'block'}}>Việc làm</span>
+              </button>
+              <button className="nav-menu-item" style={{background:'none', border:'none'}} onClick={() => window.location.href='/company'}>
+                  <i className="fas fa-building"></i> <span style={{display:'block'}}>Công ty</span>
+              </button>
+              <button className="nav-menu-item" style={{background:'none', border:'none'}}>
+                  <i className="fas fa-newspaper"></i> <span style={{display:'block'}}>Blog</span>
+              </button>
           </div>
 
-          <div className="d-flex align-items-center">
-            {user ? (
-                <>
-                    <button className="btn-chat" onClick={() => setActiveModal('chat')}><i className="fas fa-comment-dots"></i></button>
-                    <button className="btn-notification" onClick={() => setActiveModal('notification')}><i className="fas fa-bell"></i></button>
-                    <button className="btn-profile" onClick={() => setActiveModal('profile')}>
-                         <div style={{width: '100%', height:'100%', borderRadius:'50%', background: '#e74c3c', color:'white', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold'}}>
-                             {user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
-                         </div>
+          <div className="d-flex align-items-center gap-2">
+             {user ? (
+                 <div className="d-flex align-items-center">
+                    <button className="btn-chat" onClick={()=>setActiveModal('chat')}><i className="fas fa-comment-dots"></i></button>
+                    <button className="btn-notification" onClick={()=>setActiveModal('notification')}><i className="fas fa-bell"></i></button>
+                    <button className="btn-profile" onClick={()=>setActiveModal(activeModal === 'profile' ? null : 'profile')}>
+                        {user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
                     </button>
-                </>
-            ) : (
-                <div className="auth-buttons">
-                    <Link to="/login" className="btn-login-nav">Đăng nhập</Link>
-                    <Link to="/register" className="btn-register-nav">Đăng ký</Link>
-                </div>
-            )}
+                 </div>
+             ) : (
+                 <div className="auth-buttons">
+                     <Link to="/login" className="btn-login-nav">Đăng nhập</Link>
+                     <Link to="/register" className="btn-register-nav">Đăng ký</Link>
+                 </div>
+             )}
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* 2. Hero Section (Banner) */}
       <section className="hero-section">
-        <div className="banner-slider">
-          {slides.map((slide, index) => (
-            <div key={index} className={`banner-slide ${index === currentSlide ? 'active' : ''}`} style={{ backgroundImage: slide.background }}></div>
-          ))}
-        </div>
         <div className="container hero-content">
-          <h1 className="hero-title text-center">
-              {user ? `Chào mừng trở lại, ${user.fullName}!` : 'Tìm kiếm công việc mơ ước của bạn'}
-          </h1>
+          <h1 className="hero-title text-center">Tìm kiếm công việc mơ ước</h1>
           <div className="search-container">
-            <input type="text" className="search-input" placeholder="Nhập vị trí, công ty..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            <button className="btn-search" onClick={handleSearch}><i className="fas fa-search me-2"></i>Tìm kiếm</button>
+            <input
+                type="text"
+                className="search-input"
+                placeholder="Nhập vị trí, công ty..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button className="btn-search" onClick={handleSearch}>
+                <i className="fas fa-search me-2"></i>Tìm kiếm
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
-      <div className="container">
+      {/* 3. Main Content (Filters & List) */}
+      <div className="container" style={{marginTop: '40px', marginBottom: '40px'}}>
         <div className="row">
-          {/* Sidebar Filter */}
+
+          {/* Cột trái: Bộ lọc */}
           <div className="col-lg-3">
              <div className="filter-section">
                  <h5 className="filter-title">Lọc công việc</h5>
-                 <div className="filter-group">
+
+                 {/* Lọc Địa điểm */}
+                 <div className="mb-3">
                      <label>Địa điểm</label>
-                     <select className="form-select"><option>Tất cả</option><option>Hà Nội</option><option>TP. HCM</option><option>Đà Nẵng</option></select>
+                     <select className="form-control" onChange={(e) => setFilterLocation(e.target.value)}>
+                         <option value="">Tất cả</option>
+                         <option value="Hà Nội">Hà Nội</option>
+                         <option value="Hồ Chí Minh">TP. HCM</option>
+                         <option value="Đà Nẵng">Đà Nẵng</option>
+                     </select>
                  </div>
-                 <div className="filter-group">
+
+                 {/* Lọc Loại hình */}
+                 <div className="mb-3">
                      <label>Loại hình</label>
-                     <select className="form-select"><option>Tất cả</option><option>Toàn thời gian</option><option>Part-time</option></select>
+                     <select className="form-control" onChange={(e) => setFilterType(e.target.value)}>
+                         <option value="">Tất cả</option>
+                         <option value="FULL_TIME">Toàn thời gian</option>
+                         <option value="PART_TIME">Bán thời gian</option>
+                         <option value="INTERNSHIP">Thực tập</option>
+                         <option value="REMOTE">Làm từ xa</option>
+                         <option value="FREELANCE">Freelance</option>
+                     </select>
                  </div>
+
+                 {/* Lọc Mức lương */}
+                 <div className="mb-3">
+                     <label>Mức lương tối thiểu</label>
+                     <select className="form-control" onChange={(e) => setFilterSalary(e.target.value)}>
+                         <option value="">Tất cả</option>
+                         <option value="5000000">Trên 5 triệu</option>
+                         <option value="10000000">Trên 10 triệu</option>
+                         <option value="15000000">Trên 15 triệu</option>
+                         <option value="20000000">Trên 20 triệu</option>
+                         <option value="30000000">Trên 30 triệu</option>
+                     </select>
+                 </div>
+
+                 <button className="btn btn-primary w-100 mt-2" onClick={handleSearch}>Áp dụng bộ lọc</button>
              </div>
           </div>
 
-          {/* Job Listings: HIỂN THỊ DỮ LIỆU THẬT */}
+          {/* Cột phải: Danh sách công việc */}
           <div className="col-lg-9">
             <div id="job-listings">
               {loadingJobs ? (
-                  <div style={{textAlign:'center', padding:'20px', color:'#7f8c8d'}}>
-                      <i className="fas fa-spinner fa-spin fa-2x"></i>
-                      <p>Đang tải danh sách việc làm...</p>
+                  <div className="text-center p-5">
+                      <div className="spinner-border text-primary" role="status"></div>
+                      <p className="mt-2">Đang tải danh sách...</p>
                   </div>
               ) : jobs.length === 0 ? (
-                  <div style={{textAlign:'center', padding:'40px', background:'white', borderRadius:'12px'}}>
-                      <p style={{fontSize:'1.2rem', color:'#7f8c8d'}}>Chưa có tin tuyển dụng nào được đăng.</p>
+                  <div className="text-center p-5 bg-light rounded">
+                      <i className="fas fa-search fa-3x text-muted mb-3"></i>
+                      <p>Không tìm thấy công việc nào phù hợp.</p>
                   </div>
               ) : (
                   jobs.map((job) => (
-                    <div key={job.id} className="job-card" onClick={() => setSelectedJob(job)}>
+                    <div key={job.id} className="job-card" onClick={() => navigate(`/jobs/${job.id}`)}>
                       <div className="row align-items-center">
                         <div className="col-auto">
-                          {/* Logo Công Ty */}
-                          <div className="company-logo" onClick={(e) => { e.stopPropagation(); setSelectedCompany(job.company); }}>
-                             {job.company?.logo ?
-                                <img src={job.company.logo} alt="logo" style={{width:'100%', height:'100%', objectFit:'cover', borderRadius:'10px'}} onError={(e)=>e.target.style.display='none'} />
-                                : <span style={{fontSize:'2rem'}}>🏢</span>
-                             }
+                          <div
+                              className="company-logo"
+                              onClick={(e) => { e.stopPropagation(); setSelectedCompany(job.company); }}
+                              title="Xem thông tin công ty"
+                          >
+                              {job.company?.logo ? <img src={job.company.logo} alt="logo" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : '🏢'}
                           </div>
                         </div>
                         <div className="col">
                           <h3 className="job-title">{job.title}</h3>
-                          <p className="company-name">{job.company?.name || 'Công ty ẩn danh'}</p>
+                          <p className="company-name">{job.company?.name}</p>
                           <div className="job-meta">
                             <div className="meta-item"><i className="fas fa-map-marker-alt"></i> {job.location}</div>
-                            <div className="meta-item"><i className="fas fa-clock"></i> {formatType(job.type)}</div>
+                            <div className="meta-item"><i className="fas fa-briefcase"></i> {formatType(job.type)}</div>
                             <div className="meta-item"><span className="salary-badge">{formatSalary(job.salaryMin, job.salaryMax)}</span></div>
                           </div>
                         </div>
                         <div className="col-auto">
-                          {/* Ẩn nút Lưu với Employer */}
                           {user?.role !== 'EMPLOYER' && (
-                              <button className={`btn-save ${savedJobIds.includes(job.id) ? 'saved' : ''}`} onClick={(e) => toggleSaveJob(e, job.id)}>
+                              <button
+                                  className={`btn-save ${savedJobIds.includes(job.id) ? 'saved' : ''}`}
+                                  onClick={(e) => toggleSaveJob(e, job.id)}
+                                  title={savedJobIds.includes(job.id) ? "Bỏ lưu" : "Lưu công việc"}
+                              >
                                 <i className={`${savedJobIds.includes(job.id) ? 'fas' : 'far'} fa-bookmark me-1`}></i>
                                 {savedJobIds.includes(job.id) ? 'Đã lưu' : 'Lưu'}
                               </button>
@@ -418,31 +395,18 @@ const MainInterface = () => {
         </div>
       </div>
 
+      {/* 4. Footer */}
       <footer className="footer-section">
-         <div className="container"><p className="text-center text-white">© 2024 5OP Jobs. Nền tảng tuyển dụng hàng đầu.</p></div>
+         <div className="container"><p className="text-center text-white">© 2024 5OP Jobs</p></div>
       </footer>
 
-      {/* Render Modals */}
+      {/* 5. Modals & Popups */}
       {activeModal === 'chat' && renderChatWindow()}
       {activeModal === 'notification' && renderNotificationPanel()}
       {activeModal === 'profile' && renderProfilePanel()}
-      {activeModal === 'saved-jobs' && renderSavedJobsModal()}
-      {activeModal === 'applied-jobs' && renderAppliedJobsModal()}
-
-      {activeModal === 'search' && (
-        <>
-            <div className="custom-modal-overlay" onClick={() => setActiveModal(null)}></div>
-            <div className="search-message">
-                <i className="fas fa-search" style={{ fontSize: '3rem', color: '#e74c3c', marginBottom: '1rem' }}></i>
-                <p>Kết quả tìm kiếm cho: <strong>{searchQuery}</strong></p>
-                <button onClick={() => setActiveModal(null)} style={{marginTop:'10px'}}>Đóng</button>
-            </div>
-        </>
-      )}
-
-      {selectedJob && renderJobDetail()}
       {selectedCompany && renderCompanyInfo()}
 
+      {/* Toast Message */}
       {toast && <div className="toast-message" style={{ backgroundColor: toast.color }}>{toast.message}</div>}
     </div>
   );

@@ -1,4 +1,5 @@
 package com.fiveop.enity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 

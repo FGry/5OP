@@ -198,6 +198,8 @@ body {
     font-size: 1rem;
     outline: none;
     border-radius: 50px;
+    color: #333333 !important;
+    background-color: #ffffff !important;
 }
 
 .btn-search {

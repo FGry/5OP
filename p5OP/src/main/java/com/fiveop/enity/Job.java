@@ -47,6 +47,7 @@ public class Job {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
     @OneToMany(mappedBy = "job", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Application> applications;
     @PrePersist
     protected void onCreate(){
