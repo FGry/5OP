@@ -1,0 +1,110 @@
+.navbar-custom {
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    padding: 1rem 0;
+    width: 100%; /* Đảm bảo full width */
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.75rem;
+    color: #2c3e50;
+    text-decoration: none;
+}
+
+.navbar-brand span {
+    color: #e74c3c;
+}
+
+.navbar-menu {
+    flex: 1;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0 2rem;
+    display: flex;
+}
+
+.nav-menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem 1.5rem;
+    text-decoration: none;
+    color: #7f8c8d;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.nav-menu-item i {
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+}
+
+.nav-menu-item span {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.nav-menu-item:hover, .nav-menu-item.active {
+    background-color: #fef5f5;
+    color: #e74c3c;
+    transform: translateY(-2px);
+}
+
+.nav-menu-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 3px;
+    background-color: #e74c3c;
+    border-radius: 3px 3px 0 0;
+}
+
+/* Các nút icon bên phải (Chat, Bell, User) */
+.btn-chat, .btn-notification, .btn-profile {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background-color: #ecf0f1;
+    color: #34495e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.btn-chat:hover, .btn-notification:hover, .btn-profile:hover {
+    background-color: #e74c3c;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.badge-notify {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background-color: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-chat {
+    background-color: #27ae60;
+}

@@ -1,0 +1,122 @@
+/* CompanyProfile.css */
+.company-profile-container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 2.5rem;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #ecf0f1;
+}
+
+.company-title {
+    color: #2c3e50;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    border-bottom: 3px solid #e74c3c;
+    display: inline-block;
+    padding-bottom: 5px;
+}
+
+.success-message {
+    background-color: #d5f4e6;
+    color: #27ae60;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #34495e;
+}
+
+.required {
+    color: #e74c3c;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: #e74c3c;
+    outline: none;
+}
+
+.logo-preview {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 2px dashed #bdc3c7;
+    border-radius: 8px;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+.logo-img {
+    max-height: 120px;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+/* --- PHẦN SỬA ĐỔI: ĐỊNH NGHĨA NÚT BẤM --- */
+.btn-save-company, .btn-cancel-company {
+    padding: 12px 0; /* Padding trên dưới 12px */
+    width: 180px;    /* Chiều rộng cố định để 2 nút bằng nhau */
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: inline-block;
+}
+
+/* Màu nút Lưu */
+.btn-save-company {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+}
+.btn-save-company:hover {
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Màu nút Hủy */
+.btn-cancel-company {
+    background-color: #95a5a6;
+    color: white;
+}
+.btn-cancel-company:hover {
+    background-color: #7f8c8d;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
